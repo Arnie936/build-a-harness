@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build a Harness — The Blueprint</title>
+<meta name="description" content="How to build a coding-agent harness. Two articles condensed into an executable blueprint for humans and agents.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0c0f'/%3E%3Cpath d='M9 10h14M9 16h14M9 22h14' stroke='%2367e8f9' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0a0c0f; --panel:#111519; --panel2:#151a20; --line:#242b33;
+  --tx:#dbe2ea; --mut:#8a97a6; --dim:#5f6c7b;
+  --acc:#67e8f9; --acc2:#fbbf24; --ok:#4ade80;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.65 var(--sans);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:64px 64px;background-position:-1px -1px}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(120% 80% at 50% 0%,transparent 18%,var(--bg) 76%)}
+.wrap{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:0 22px 100px}
+
+header{padding:76px 0 44px;border-bottom:1px solid var(--line)}
+.kicker{font:600 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin:0 0 18px}
+h1{font-size:clamp(32px,6vw,52px);line-height:1.04;letter-spacing:-.02em;margin:0 0 16px;font-weight:700}
+.lede{font-size:clamp(17px,2.3vw,20px);line-height:1.55;color:var(--mut);max-width:64ch;margin:0}
+.lede b{color:var(--tx);font-weight:600}
+.src{margin:26px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:10px}
+.src a{font:500 12.5px/1 var(--mono);color:var(--mut);text-decoration:none;border:1px solid var(--line);
+  background:var(--panel);padding:9px 12px;border-radius:6px;display:inline-block}
+.src a:hover{color:var(--acc);border-color:var(--acc)}
+
+section{padding:52px 0;border-bottom:1px solid var(--line)}
+h2{font-size:clamp(22px,3.4vw,29px);line-height:1.2;letter-spacing:-.015em;margin:0 0 10px;font-weight:700}
+h2 .n{font:600 13px/1 var(--mono);color:var(--acc);margin-right:12px;vertical-align:3px}
+h3{font-size:16px;margin:32px 0 10px;font-weight:650;letter-spacing:-.01em}
+p{margin:0 0 14px;max-width:70ch}
+p.sub{color:var(--mut);margin:0 0 22px;max-width:68ch}
+strong{font-weight:650;color:#fff}
+a{color:var(--acc)}
+ul,ol{max-width:70ch;padding-left:20px;margin:0 0 16px}
+li{margin:0 0 7px}
+li::marker{color:var(--dim)}
+code{font:0.875em/1.5 var(--mono);background:var(--panel2);border:1px solid var(--line);
+  padding:1px 5px;border-radius:4px;color:var(--acc)}
+
+.claim{border-left:2px solid var(--acc);background:var(--panel);padding:16px 18px;margin:0 0 22px;border-radius:0 6px 6px 0}
+.claim p{margin:0;font-size:17px}
+.claim cite{display:block;font:500 12px/1 var(--mono);color:var(--dim);font-style:normal;margin-top:10px}
+.note{border:1px solid var(--line);border-left:2px solid var(--acc2);background:var(--panel);
+  padding:14px 16px;border-radius:0 6px 6px 0;margin:0 0 22px}
+.note p{margin:0;font-size:14.5px;color:var(--mut);max-width:68ch}
+.note b{color:var(--acc2);font:600 11.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:7px}
+
+pre{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;
+  overflow-x:auto;margin:0 0 20px;font:13px/1.6 var(--mono);color:#cfd8e3}
+pre .c{color:var(--dim)}
+pre .k{color:#c792ea}
+pre .s{color:#a5e6a5}
+pre .f{color:var(--acc)}
+figcaption{font:500 12px/1.55 var(--mono);color:var(--dim);margin:-10px 0 24px;max-width:74ch}
+
+.tbl{width:100%;border-collapse:collapse;margin:0 0 22px;font-size:14.5px;display:block;overflow-x:auto}
+.tbl th{text-align:left;font:600 11.5px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim);padding:0 14px 10px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:12px 14px 12px 0;border-bottom:1px solid var(--line);vertical-align:top;color:var(--mut)}
+.tbl td:first-child{color:var(--tx);font-weight:600;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:0}
+
+figure{margin:0 0 26px}
+.dia{width:100%;height:auto;display:block;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+
+.phase{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:20px 22px;margin:0 0 14px}
+.phase h4{margin:0 0 5px;font-size:16px;font-weight:650;letter-spacing:-.01em}
+.phase h4 span{font:600 11.5px/1 var(--mono);color:var(--bg);background:var(--acc);
+  padding:4px 7px;border-radius:4px;margin-right:11px;vertical-align:2px}
+.phase .goal{color:var(--mut);font-size:14.5px;margin:0 0 14px}
+.phase dl{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:9px 16px;font-size:14.5px}
+.phase dt{font:600 11px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);padding-top:2px}
+.phase dd{margin:0;color:var(--mut)}
+.phase dd code{font-size:13px}
+.phase dd.done{color:var(--ok)}
+
+.chk{list-style:none;padding:0;max-width:none}
+.chk li{padding-left:26px;position:relative;margin:0 0 9px;font-size:14.5px;color:var(--mut);max-width:72ch}
+.chk li::before{content:"";position:absolute;left:0;top:6px;width:12px;height:12px;
+  border:1px solid var(--dim);border-radius:3px}
+.chk li b{color:var(--tx);font-weight:650}
+
+.specbar{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  background:var(--panel2);border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;padding:11px 16px}
+.specbar span{font:600 11.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.specbar button{font:600 12px/1 var(--mono);color:var(--bg);background:var(--acc);border:0;
+  padding:8px 13px;border-radius:5px;cursor:pointer}
+.specbar button:hover{filter:brightness(1.12)}
+#spec{border-radius:0 0 8px 8px;max-height:440px;overflow:auto;white-space:pre-wrap;color:var(--mut)}
+
+.cta-link{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px;
+  text-decoration:none;color:var(--tx)}
+.cta-link:hover{border-color:var(--acc)}
+.cta-name{font-weight:650;letter-spacing:-.01em}
+.cta-name em{display:block;font:500 12.5px/1.5 var(--mono);font-style:normal;color:var(--dim);margin-top:5px}
+.cta-go{font:600 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--bg);
+  background:var(--acc);padding:10px 14px;border-radius:5px;white-space:nowrap}
+.cta-link:hover .cta-go{filter:brightness(1.12)}
+
+footer{padding:44px 0 0;color:var(--dim);font-size:13.5px}
+footer a{color:var(--mut)}
+@media(max-width:640px){
+  header{padding:52px 0 34px}
+  section{padding:40px 0}
+  .phase dl{grid-template-columns:1fr;gap:3px 0}
+  .phase dt{margin-top:10px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Blueprint · Coding-Agent Harness</p>
+  <h1>A harness is a loop.<br>Everything else is craft.</h1>
+  <p class="lede">Two articles, one finding: the core of a coding agent is <b>an LLM, a loop, and enough tokens</b> — under 400 lines of Go for Thorsten Ball, about 200 lines of Python for Mihail Eric. This page condenses both into an <b>executable blueprint</b>: readable for humans, directly workable for a coding agent.</p>
+  <ul class="src">
+    <li><a href="https://ampcode.com/notes/how-to-build-an-agent">Thorsten Ball — How to Build an Agent ↗</a></li>
+    <li><a href="https://www.mihaileric.com/The-Emperor-Has-No-Clothes/">Mihail Eric — The Emperor Has No Clothes ↗</a></li>
+  </ul>
+</header>
+
+<section id="thesis">
+  <h2><span class="n">01</span>The thesis</h2>
+  <div class="claim">
+    <p>“It's an LLM, a loop, and enough tokens.”</p>
+    <cite>Thorsten Ball, Amp</cite>
+  </div>
+  <div class="claim">
+    <p>“The core of these tools isn't magic. It's about 200 lines of straightforward Python.”</p>
+    <cite>Mihail Eric</cite>
+  </div>
+  <p>Both take apart the same black box and find the same thing: no planning engine, no reasoning framework, no graph. An array of messages, a handful of functions, a <code>while</code> loop.</p>
+  <p>The practical consequence for building one: <strong>the loop is done in an hour.</strong> The work sits at its edges — error handling, permissions, context budget, tool quality. Flip that around and start with architecture, and you are building past the problem.</p>
+</section>
+
+<section id="principle">
+  <h2><span class="n">02</span>The model touches nothing</h2>
+  <p class="sub">The most important mental model on this page. With it, every harness design makes sense; without it, you build security holes.</p>
+  <div class="claim">
+    <p>“The LLM never actually touches your filesystem. It just <em>asks</em> for things to happen, and your code makes them happen.”</p>
+    <cite>Mihail Eric</cite>
+  </div>
+
+  <figure>
+  <svg class="dia" viewBox="0 0 880 260" role="img" aria-label="Diagram: the LLM only sends requests; the harness executes them and is the only trust boundary to the system">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#67e8f9"/></marker>
+      <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#8a97a6"/></marker>
+    </defs>
+    <g font-family="ui-monospace,Menlo,Consolas,monospace">
+      <rect x="28" y="70" width="200" height="120" rx="8" fill="#151a20" stroke="#242b33"/>
+      <text x="128" y="118" fill="#dbe2ea" font-size="15" font-weight="600" text-anchor="middle">LLM</text>
+      <text x="128" y="140" fill="#8a97a6" font-size="11.5" text-anchor="middle">decides</text>
+      <text x="128" y="157" fill="#5f6c7b" font-size="11.5" text-anchor="middle">no access</text>
+
+      <rect x="340" y="52" width="200" height="156" rx="8" fill="#151a20" stroke="#67e8f9"/>
+      <text x="440" y="100" fill="#67e8f9" font-size="15" font-weight="600" text-anchor="middle">HARNESS</text>
+      <text x="440" y="123" fill="#8a97a6" font-size="11.5" text-anchor="middle">executes</text>
+      <text x="440" y="140" fill="#8a97a6" font-size="11.5" text-anchor="middle">checks permissions</text>
+      <text x="440" y="157" fill="#8a97a6" font-size="11.5" text-anchor="middle">limits output</text>
+      <text x="440" y="180" fill="#fbbf24" font-size="11" text-anchor="middle">only trust boundary</text>
+
+      <rect x="652" y="70" width="200" height="120" rx="8" fill="#151a20" stroke="#242b33"/>
+      <text x="752" y="112" fill="#dbe2ea" font-size="15" font-weight="600" text-anchor="middle">SYSTEM</text>
+      <text x="752" y="134" fill="#8a97a6" font-size="11.5" text-anchor="middle">files · shell</text>
+      <text x="752" y="151" fill="#8a97a6" font-size="11.5" text-anchor="middle">network</text>
+
+      <path d="M232 108 L332 108" stroke="#67e8f9" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="282" y="99" fill="#67e8f9" font-size="10.5" text-anchor="middle">tool_use</text>
+      <path d="M332 152 L232 152" stroke="#8a97a6" stroke-width="1.5" marker-end="url(#ar2)"/>
+      <text x="282" y="171" fill="#8a97a6" font-size="10.5" text-anchor="middle">tool_result</text>
+
+      <path d="M544 108 L644 108" stroke="#67e8f9" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="594" y="99" fill="#67e8f9" font-size="10.5" text-anchor="middle">syscall</text>
+      <path d="M644 152 L544 152" stroke="#8a97a6" stroke-width="1.5" marker-end="url(#ar2)"/>
+      <text x="594" y="171" fill="#8a97a6" font-size="10.5" text-anchor="middle">bytes</text>
+
+      <text x="440" y="238" fill="#5f6c7b" font-size="11" text-anchor="middle">The model only produces text. Every effect in the world happens in your code.</text>
+    </g>
+  </svg>
+  </figure>
+
+  <p>Everything important follows from this: permission checks, sandboxing, path validation and output limits belong <strong>in the harness, without exception</strong> — never in the prompt. A prompt is a request, not a safeguard.</p>
+</section>
+
+<section id="loop">
+  <h2><span class="n">03</span>The loop</h2>
+  <p class="sub">Two nested loops. The outer one collects user input; the inner one lets the model call tools until it is done.</p>
+
+  <figure>
+  <svg class="dia" viewBox="0 0 880 300" role="img" aria-label="Diagram of the agent loop: outer loop for user input, inner loop of API call, tool execution and feeding the result back">
+    <defs>
+      <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#67e8f9"/></marker>
+      <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#fbbf24"/></marker>
+    </defs>
+    <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12">
+      <rect x="30" y="30" width="820" height="198" rx="10" fill="none" stroke="#242b33" stroke-dasharray="4 4"/>
+      <text x="46" y="22" fill="#5f6c7b" font-size="10.5">outer loop · per user input</text>
+
+      <rect x="54" y="104" width="132" height="52" rx="6" fill="#151a20" stroke="#242b33"/>
+      <text x="120" y="135" fill="#dbe2ea" text-anchor="middle">user input</text>
+
+      <rect x="230" y="68" width="600" height="144" rx="8" fill="none" stroke="#67e8f9" stroke-dasharray="4 4" opacity=".5"/>
+      <text x="814" y="60" fill="#67e8f9" font-size="10.5" text-anchor="end">inner loop · until no more tool_use</text>
+
+      <rect x="256" y="104" width="132" height="52" rx="6" fill="#151a20" stroke="#67e8f9"/>
+      <text x="322" y="127" fill="#67e8f9" text-anchor="middle">API call</text>
+      <text x="322" y="144" fill="#8a97a6" font-size="10.5" text-anchor="middle">+ tool defs</text>
+
+      <path d="M462 130 L436 104 L410 130 L436 156 Z" fill="#151a20" stroke="#242b33"/>
+      <text x="436" y="134" fill="#8a97a6" font-size="10" text-anchor="middle">tool?</text>
+
+      <rect x="500" y="104" width="132" height="52" rx="6" fill="#151a20" stroke="#242b33"/>
+      <text x="566" y="127" fill="#dbe2ea" text-anchor="middle">execute</text>
+      <text x="566" y="144" fill="#8a97a6" font-size="10.5" text-anchor="middle">local, checked</text>
+
+      <rect x="676" y="104" width="140" height="52" rx="6" fill="#151a20" stroke="#242b33"/>
+      <text x="746" y="127" fill="#dbe2ea" text-anchor="middle">append result</text>
+      <text x="746" y="144" fill="#8a97a6" font-size="10.5" text-anchor="middle">to conversation</text>
+
+      <path d="M190 130 L248 130" stroke="#67e8f9" stroke-width="1.5" marker-end="url(#a3)"/>
+      <path d="M392 130 L404 130" stroke="#67e8f9" stroke-width="1.5" marker-end="url(#a3)"/>
+      <path d="M468 130 L492 130" stroke="#67e8f9" stroke-width="1.5" marker-end="url(#a3)"/>
+      <text x="481" y="121" fill="#67e8f9" font-size="10">yes</text>
+      <path d="M636 130 L668 130" stroke="#67e8f9" stroke-width="1.5" marker-end="url(#a3)"/>
+
+      <path d="M746 160 L746 194 L322 194 L322 164" stroke="#67e8f9" stroke-width="1.5" fill="none" marker-end="url(#a3)"/>
+      <text x="534" y="210" fill="#67e8f9" font-size="10.5" text-anchor="middle">back into the model — this is where multi-step work happens</text>
+
+      <path d="M436 100 L436 78 L120 78 L120 96" stroke="#fbbf24" stroke-width="1.5" fill="none" marker-end="url(#a4)"/>
+      <text x="278" y="71" fill="#fbbf24" font-size="10.5" text-anchor="middle">no → print answer, wait</text>
+
+      <text x="440" y="272" fill="#5f6c7b" font-size="11" text-anchor="middle">The agent's entire state is the conversation array. The API is stateless.</text>
+    </g>
+  </svg>
+  </figure>
+
+  <pre><span class="c"># The complete agent. Everything else is hardening.</span>
+conversation = []
+
+<span class="k">while</span> True:
+    conversation.append({<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: input(<span class="s">"you: "</span>)})
+
+    <span class="k">while</span> True:                                  <span class="c"># inner loop</span>
+        msg = client.messages.create(
+            model=MODEL, max_tokens=<span class="f">8192</span>,
+            system=SYSTEM_PROMPT,
+            tools=[t[<span class="s">"schema"</span>] <span class="k">for</span> t <span class="k">in</span> TOOLS.values()],
+            messages=conversation,
+        )
+        conversation.append({<span class="s">"role"</span>: <span class="s">"assistant"</span>, <span class="s">"content"</span>: msg.content})
+
+        calls = [b <span class="k">for</span> b <span class="k">in</span> msg.content <span class="k">if</span> b.type == <span class="s">"tool_use"</span>]
+        <span class="k">if</span> <span class="k">not</span> calls:
+            print(text_of(msg)); <span class="k">break</span>                <span class="c"># done → user's turn</span>
+
+        results = [run_tool(c) <span class="k">for</span> c <span class="k">in</span> calls]      <span class="c"># answer every call!</span>
+        conversation.append({<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: results})</pre>
+  <figcaption>agent.py — the core, about 20 lines. Python/Anthropic; the pattern is provider-agnostic.</figcaption>
+
+  <div class="note"><b>Hard rule</b><p>Every <code>tool_use</code> block in a response needs exactly one <code>tool_result</code> block with a matching <code>tool_use_id</code> — in the next message, all of them. If one is missing, the API rejects the next call. This is by far the most common mistake when rebuilding this.</p></div>
+</section>
+
+<section id="state">
+  <h2><span class="n">04</span>The state is an array</h2>
+  <p>The server remembers nothing. Everything the agent “knows” lives entirely in <code>conversation</code> and is resent in full on every step. That explains three things at once:</p>
+  <ul>
+    <li><strong>Why context gets expensive.</strong> Cost and latency grow with the array, not with the task. The contents of a 4,000-line file stay in the budget for the rest of the session.</li>
+    <li><strong>Why compaction is necessary.</strong> At some point the array hits the context window. Without a countermeasure, the session dies in the middle of the task.</li>
+    <li><strong>Why persistence is trivial.</strong> Serializing the array means: save, resume, fork and debug sessions. Build this early — it is your entire observability.</li>
+  </ul>
+</section>
+
+<section id="tool">
+  <h2><span class="n">05</span>Anatomy of a tool</h2>
+  <p class="sub">Four fields. Only one of them is code — the other three are prompt engineering.</p>
+  <table class="tbl">
+    <thead><tr><th>Field</th><th>Purpose</th><th>Most common mistake</th></tr></thead>
+    <tbody>
+      <tr><td>name</td><td>Identity for dispatch. Verb plus object, snake_case.</td><td>Cryptic abbreviations like <code>rf</code> instead of <code>read_file</code>.</td></tr>
+      <tr><td>description</td><td>Tells the model <em>when</em> to use the tool and when not to.</td><td>Describes <em>what</em> the function does instead of when you need it.</td></tr>
+      <tr><td>input_schema</td><td>JSON Schema. Enforces valid arguments.</td><td>Free-text parameters without a per-field <code>description</code>.</td></tr>
+      <tr><td>function</td><td>Executes and <strong>always returns a string</strong>.</td><td>Throws exceptions instead of returning the error text.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note"><b>The lever</b><p>The <code>description</code> is not a comment — it is the part of your prompt with the biggest effect. Both authors stress the same point: the model is trained on tool use and does it eagerly. It doesn't need persuading, it needs <em>boundaries</em>. Write down what the tool does <strong>not</strong> do (“Not for directories”) and when another tool fits better.</p></div>
+
+  <pre><span class="c"># A tool = schema + function. The description carries the behavior.</span>
+READ_FILE = {
+  <span class="s">"name"</span>: <span class="s">"read_file"</span>,
+  <span class="s">"description"</span>: (
+      <span class="s">"Reads the contents of a file relative to the working directory. "</span>
+      <span class="s">"Use this before editing a file. "</span>
+      <span class="s">"NOT for directories - use list_files for that."</span>),
+  <span class="s">"input_schema"</span>: {
+      <span class="s">"type"</span>: <span class="s">"object"</span>,
+      <span class="s">"properties"</span>: {<span class="s">"path"</span>: {<span class="s">"type"</span>: <span class="s">"string"</span>,
+                      <span class="s">"description"</span>: <span class="s">"Relative path, e.g. src/main.py"</span>}},
+      <span class="s">"required"</span>: [<span class="s">"path"</span>],
+  },
+}</pre>
+
+  <h3>The dispatcher that doesn't swallow errors</h3>
+  <p>Errors are not crashes, they are information for the model. It reads “file not found”, fixes the path and tries again. A harness that lets exceptions propagate takes away the agent's ability to correct itself.</p>
+  <pre><span class="k">def</span> <span class="f">run_tool</span>(call):
+    fn = TOOLS.get(call.name)
+    <span class="k">try</span>:
+        out = fn[<span class="s">"function"</span>](**call.input) <span class="k">if</span> fn <span class="k">else</span> <span class="s">f"unknown tool: {call.name}"</span>
+        err = fn <span class="k">is</span> <span class="k">None</span>
+    <span class="k">except</span> Exception <span class="k">as</span> e:
+        out, err = <span class="s">f"{type(e).__name__}: {e}"</span>, <span class="k">True</span>   <span class="c"># error = feedback</span>
+    <span class="k">return</span> {<span class="s">"type"</span>: <span class="s">"tool_result"</span>, <span class="s">"tool_use_id"</span>: call.id,
+            <span class="s">"content"</span>: truncate(out, <span class="f">30_000</span>), <span class="s">"is_error"</span>: err}</pre>
+  <figcaption>Two details make the difference: <code>is_error</code> instead of a crash — and <code>truncate</code>, so a single file can't eat the context window.</figcaption>
+</section>
+
+<section id="tools3">
+  <h2><span class="n">06</span>The three tools that are enough</h2>
+  <p class="sub">Both articles independently arrive at the same minimal set. With it, the agent already reads, writes and changes real projects.</p>
+  <table class="tbl">
+    <thead><tr><th>Tool</th><th>Parameters</th><th>Contract</th></tr></thead>
+    <tbody>
+      <tr><td>list_files</td><td><code>path?</code></td><td>Returns a JSON array. Directories end with <code>/</code>. Ignores <code>.git</code> and <code>node_modules</code>.</td></tr>
+      <tr><td>read_file</td><td><code>path</code></td><td>File contents as a string. If the file is missing, the error text comes back — no crash.</td></tr>
+      <tr><td>edit_file</td><td><code>path, old_str, new_str</code></td><td>Replaces <code>old_str</code> with <code>new_str</code>. Empty <code>old_str</code> plus a missing file means create.</td></tr>
+    </tbody>
+  </table>
+
+  <p>The trick with <code>edit_file</code>: a single tool covers creating <em>and</em> changing, and the model never has to count line numbers — it quotes the text it wants to replace. That is exactly why string replacement works better than any diff format.</p>
+
+  <pre><span class="k">def</span> <span class="f">edit_file</span>(path, old_str, new_str):
+    <span class="k">if</span> old_str == new_str:
+        <span class="k">raise</span> ValueError(<span class="s">"old_str and new_str must differ"</span>)
+
+    p = safe_path(path)                       <span class="c"># mandatory, see section 08</span>
+    <span class="k">if</span> old_str == <span class="s">""</span>:
+        p.parent.mkdir(parents=<span class="k">True</span>, exist_ok=<span class="k">True</span>)
+        p.write_text(new_str); <span class="k">return</span> <span class="s">f"created {path}"</span>
+
+    src = p.read_text()
+    n = src.count(old_str)
+    <span class="k">if</span> n == <span class="f">0</span>:
+        <span class="k">raise</span> ValueError(<span class="s">"old_str not found - read the file again"</span>)
+    <span class="k">if</span> n &gt; <span class="f">1</span>:
+        <span class="k">raise</span> ValueError(<span class="s">f"old_str found {n}x - include more context"</span>)
+
+    p.write_text(src.replace(old_str, new_str))
+    <span class="k">return</span> <span class="s">f"edited {path}"</span></pre>
+  <figcaption>The ambiguity check (<code>n &gt; 1</code>) is missing from both minimal versions and is the most important addition: it stops an edit from silently hitting five places at once.</figcaption>
+
+  <div class="note"><b>Only then expand</b><p>Production harnesses add <code>bash</code>, <code>grep</code>/<code>glob</code> and <code>web_search</code>. Keep the order anyway: get the three working first, then <code>bash</code> — from that moment on you need permission checks.</p></div>
+</section>
+
+<section id="wiring">
+  <h2><span class="n">07</span>Two ways to wire up tools</h2>
+  <p class="sub">This is where the articles diverge — and the choice decides how much parser code you write.</p>
+  <table class="tbl">
+    <thead><tr><th></th><th>A · Native tool_use</th><th>B · Text protocol</th></tr></thead>
+    <tbody>
+      <tr><td>Source</td><td>Thorsten Ball</td><td>Mihail Eric</td></tr>
+      <tr><td>Mechanics</td><td>Tools are passed as <code>tools=[...]</code>; the model returns structured <code>tool_use</code> blocks.</td><td>Tools are listed in the system prompt; the model writes <code>tool: name({"a":1})</code>, you parse the line.</td></tr>
+      <tr><td>Parsing</td><td>None. Arguments arrive validated.</td><td>Your own parser, plus handling broken JSON.</td></tr>
+      <tr><td>Strength</td><td>Robust, multiple calls per turn, official error channels.</td><td>Runs on any model, even without a tool API.</td></tr>
+      <tr><td>Use it</td><td><strong>As the default.</strong></td><td>Only as a fallback for models without tool support.</td></tr>
+    </tbody>
+  </table>
+  <p>Option B is instructive because it shows that tool use isn't API magic, just a convention. For the build you still pick A: whatever you save on parser code goes into tool quality.</p>
+</section>
+
+<section id="gap">
+  <h2><span class="n">08</span>What separates a demo from a harness</h2>
+  <div class="claim">
+    <p>“The rest, the stuff that makes Amp so addictive and impressive? Elbow grease.”</p>
+    <cite>Thorsten Ball</cite>
+  </div>
+  <p class="sub">Both articles name this gap but don't fill it. This is the list your agent has to work through — sorted by impact.</p>
+  <table class="tbl">
+    <thead><tr><th>Gap</th><th>Symptom without it</th><th>Implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Path sandbox</td><td><code>../../.ssh/id_rsa</code> is readable.</td><td><code>safe_path()</code>: resolve, check against the project root, reject symlinks. In <em>every</em> file tool.</td></tr>
+      <tr><td>Approvals</td><td>An <code>rm -rf</code> runs without asking.</td><td>Classify tools as read/write/exec. Everything from write upward asks first, with a diff preview and “remember for this session”.</td></tr>
+      <tr><td>Errors as feedback</td><td>Agent quits on a typo in a path.</td><td><code>is_error: true</code> plus a readable message. The error text is a prompt — write it like one.</td></tr>
+      <tr><td>Output budget</td><td>One <code>npm install</code> log blows the window.</td><td>Hard-truncate every tool result, e.g. to 30k characters: keep head and tail, replace the middle with a notice.</td></tr>
+      <tr><td>Compaction</td><td>Session dies on a long task.</td><td>From about 75% of the window, have the model summarize older turns; keep the summary plus the last N turns.</td></tr>
+      <tr><td>Loop brake</td><td>Agent reads the same file twenty times.</td><td>Hard counter per user request; detect identical calls and answer them with a notice.</td></tr>
+      <tr><td>Streaming</td><td>30 seconds of blank screen.</td><td>Stream the response, show tool calls as they arrive.</td></tr>
+      <tr><td>Project context</td><td>Ignores the repo's conventions.</td><td>Read <code>AGENTS.md</code> or <code>CLAUDE.md</code> on startup and append it to the system prompt.</td></tr>
+      <tr><td>Sub-agents</td><td>Searches flood the main context.</td><td>A <code>task</code> tool starts a second loop with its own array; only the result comes back.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="blueprint">
+  <h2><span class="n">09</span>The build plan</h2>
+  <p class="sub">Five phases. Each ends with an acceptance test that must pass before the next one starts. A coding agent can work through this top to bottom.</p>
+
+  <div class="phase">
+    <h4><span>P0</span>Scaffold</h4>
+    <p class="goal">A process that gets a model response onto the console.</p>
+    <dl>
+      <dt>Build</dt><dd>Project, SDK client, API key from the environment, a <code>MODEL</code> constant, an empty <code>conversation</code> array, a REPL loop.</dd>
+      <dt>Acceptance</dt><dd class="done">“Say hello” → a response appears; the second question demonstrably refers to the first.</dd>
+    </dl>
+  </div>
+
+  <div class="phase">
+    <h4><span>P1</span>The loop</h4>
+    <p class="goal">Inner loop with tool dispatch — with exactly one dummy tool.</p>
+    <dl>
+      <dt>Build</dt><dd>Tool registry (<code>name → {schema, function}</code>), <code>run_tool()</code> with try/except, correct appending of <code>tool_use</code> and <code>tool_result</code>, exit when no calls come back.</dd>
+      <dt>Rule</dt><dd>Answer every call in a response before the next request goes out.</dd>
+      <dt>Acceptance</dt><dd class="done">The dummy tool <code>get_time</code> gets called and its result flows into the answer. Two calls in one turn work.</dd>
+    </dl>
+  </div>
+
+  <div class="phase">
+    <h4><span>P2</span>The three tools</h4>
+    <p class="goal">The agent works with real files.</p>
+    <dl>
+      <dt>Build</dt><dd><code>list_files</code>, <code>read_file</code>, <code>edit_file</code> following the contracts from section 06 — including the ambiguity check.</dd>
+      <dt>Right away</dt><dd><code>safe_path()</code>. Not later. Without it, every test is a risk.</dd>
+      <dt>Acceptance</dt><dd class="done">“Write fizzbuzz.js and run it up to 15” → the file is created, the agent reads it back and changes the limit. “Which version is in package.json?” → it finds the file on its own via <code>list_files</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="phase">
+    <h4><span>P3</span>Hardening</h4>
+    <p class="goal">The toy becomes a tool you can actually leave running.</p>
+    <dl>
+      <dt>Build</dt><dd>Approval prompt before every writing tool · output truncation · iteration limit · streaming · save and load the session as JSON.</dd>
+      <dt>Then</dt><dd>A <code>bash</code> tool with a timeout, bound to the working directory, with mandatory approval. Only now, not earlier.</dd>
+      <dt>Acceptance</dt><dd class="done">A rejected approval stops the action without crashing the agent — it rephrases. A tool with 1 MB of output doesn't kill the session.</dd>
+    </dl>
+  </div>
+
+  <div class="phase">
+    <h4><span>P4</span>Endurance</h4>
+    <p class="goal">Tasks that last longer than one context window.</p>
+    <dl>
+      <dt>Build</dt><dd>Token counter · automatic compaction from about 75% · project context from <code>AGENTS.md</code> · <code>grep</code>/<code>glob</code> · a <code>task</code> sub-agent with its own array.</dd>
+      <dt>Acceptance</dt><dd class="done">A task with 40 or more tool calls runs through compaction without forgetting the assignment.</dd>
+    </dl>
+  </div>
+</section>
+
+<section id="pitfalls">
+  <h2><span class="n">10</span>Pitfalls</h2>
+  <ul class="chk">
+    <li><b>Incomplete tool_results.</b> A single missing block makes the next API call invalid. The number one cause of failures when rebuilding this.</li>
+    <li><b>Appending tool results as an assistant message.</b> They belong in a <code>user</code> message.</li>
+    <li><b>Exceptions instead of error text.</b> Takes away the agent's self-correction and your robustness.</li>
+    <li><b>Security in the prompt.</b> “Please don't write outside the project” is not a boundary. <code>safe_path()</code> is.</li>
+    <li><b>Line-number edits.</b> Models miscount. String replacement with enough context is more robust.</li>
+    <li><b>Unchecked tool output.</b> One log, one window, session dead.</li>
+    <li><b>Architecture before the loop.</b> Planners, state machines, graphs — all of it before P3 is a distraction from the actual problem.</li>
+    <li><b>Too many tools too early.</b> Twenty tools dilute the choice. Three good ones beat ten mediocre ones.</li>
+  </ul>
+</section>
+
+<section id="agent-spec">
+  <h2><span class="n">11</span>Agent spec</h2>
+  <p class="sub">The same page, condensed to what a coding agent needs as its assignment. Copy it and hand it over as a prompt.</p>
+  <div class="specbar">
+    <span>build-harness.md</span>
+    <button id="cp" type="button">Copy</button>
+  </div>
+  <pre id="spec"># TASK: Build a coding-agent harness
+
+## Invariant
+The LLM touches nothing. It returns text; every effect happens in your
+code. Security, limits and permissions belong in the harness, never in the
+prompt.
+
+## Architecture
+- State = one array `conversation`. The API is stateless.
+- Outer loop: append user input.
+- Inner loop: API call (with tool definitions) -> if tool_use blocks
+  come back: execute all of them locally, append all results as ONE user
+  message, call again. No tool_use -> print text, leave the loop.
+- Use the API's native tool calling; don't parse a text protocol.
+
+## Tool contract
+Every tool: name (snake_case, verb_object), description (says WHEN and WHEN
+NOT), input_schema (JSON Schema, every field described), function
+(always returns a string).
+Never throw errors: return them as a tool_result with is_error=true and a
+readable message. Truncate every result to roughly 30k characters.
+Every tool_use block gets exactly one tool_result with a matching
+tool_use_id.
+
+## Tools (in this order)
+1. list_files(path?)  -> JSON array, directories end with "/",
+   .git and node_modules skipped.
+2. read_file(path)    -> contents as a string.
+3. edit_file(path, old_str, new_str) -> replaces old_str with new_str.
+   old_str == "" and file missing -> create (incl. parent directories).
+   old_str not found -> error "read the file again".
+   old_str found multiple times -> error "include more context". MANDATORY.
+Only after that: bash (timeout + approval), grep/glob, task (sub-agent).
+
+## Security (not optional)
+safe_path(path): resolve, check against the project root, reject symlinks
+and escapes. Call it in EVERY file tool.
+Writing and executing tools require user approval with a preview.
+
+## Phases with acceptance tests
+P0 Scaffold   -> two turns, the second refers to the first.
+P1 Loop       -> dummy tool gets called; two calls per turn work.
+P2 Three tools -> "write fizzbuzz.js up to 15" creates, reads and changes
+                 the file; "which version is in package.json" is found
+                 on its own via list_files.
+P3 Hardening  -> approvals, truncation, iteration limit, streaming, save/
+                 load session. A rejected approval doesn't crash.
+P4 Endurance  -> token counter, auto-compaction from 75% of the window,
+                 project context from AGENTS.md, sub-agent with its own
+                 array. 40+ tool calls survive a compaction.
+
+## Do not build
+Planners, state machines, graph frameworks, a tool zoo. The loop is the
+architecture. The rest is craft at its edges.</pre>
+</section>
+
+<section id="community">
+  <h2>Keep building</h2>
+  <p class="sub">Questions about rebuilding this, your own harness variants and what actually holds up day to day — that's what I discuss in my community.</p>
+  <a class="cta-link" href="https://www.skool.com/ai-mit-arnie-ki-revolution/about" target="_blank" rel="noopener">
+    <span class="cta-name">AI mit Arnie — KI Revolution<em>skool.com/ai-mit-arnie-ki-revolution</em></span>
+    <span class="cta-go">Join the community ↗</span>
+  </a>
+</section>
+
+<footer>
+  <p>Condensed from <a href="https://ampcode.com/notes/how-to-build-an-agent">“How to Build an Agent”</a> by Thorsten Ball and <a href="https://www.mihaileric.com/The-Emperor-Has-No-Clothes/">“The Emperor Has No Clothes”</a> by Mihail Eric. The code samples are my own minimal versions of the pattern described, not the articles' original code.</p>
+</footer>
+
+</div>
+<script>
+document.getElementById('cp').addEventListener('click', function () {
+  var b = this;
+  navigator.clipboard.writeText(document.getElementById('spec').innerText).then(function () {
+    b.textContent = 'Copied';
+    setTimeout(function () { b.textContent = 'Copy'; }, 1600);
+  });
+});
+</script>
+</body>
+</html>
